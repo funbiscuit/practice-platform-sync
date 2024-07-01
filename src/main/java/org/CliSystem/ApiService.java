@@ -1,20 +1,52 @@
 package org.CliSystem;
 
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 
-public class ApiService implements Callback<List<ApiDto>> {
+public class ApiService{
 
-    public void save(String url, String path){
+    public String save(String url, String path){
         Retrofit retrofit = createRetro(url);
         RequestInterface service = retrofit.create(RequestInterface.class);
-        Call<List<ApiDto>> repos = service.saveModules(createDto(path));
-        repos.enqueue(this);
+        Call<ModuleDto> repos = service.saveModules(createModule(path));
+        try {
+            Response<ModuleDto> response = repos.execute();
+            return response.body().toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "Что-то пошло не так";
+    }
+
+    private ModuleObj createModule(String path){
+        return new ModuleObj(pathToName(path),pathToScript(path),null);
+    }
+
+    private String pathToScript(String path){
+        try {
+            return new String(Files.readAllBytes(Paths.get(path)));
+        } catch (IOException e) {
+            return "Файл пуст!";
+        }
+    }
+
+    private String pathToName(String path){
+
+        if (path.endsWith(".py")) { path = path.substring(0, path.length() - ".py".length());}
+        if (path.endsWith("init")) { path = path.substring(0, path.length() - "init".length() - 1);}
+        int index = path.indexOf("modules");
+        if (index != -1) {
+            return path.substring(index).replace("/", ".");
+        } else {
+            return "modules." + path.replace("/", ".");
+        }
     }
 
     private Retrofit createRetro(String url){
@@ -23,26 +55,5 @@ public class ApiService implements Callback<List<ApiDto>> {
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
     }
-    // TODO добавить metadata и script
-    private ApiDto createDto(String path){
-        return ApiDto.builder()
-                .name(path)
-                .build();
-    }
 
-    // TODO сделать нормальную обработку на положительный запрос
-    @Override
-    public void onResponse(Call<List<ApiDto>> call, Response<List<ApiDto>> response) {
-        if(response.isSuccessful()) {
-            System.out.println("Succesfully!!!");
-        }
-        else {
-            System.out.println(response.errorBody());
-        }
-    }
-
-    @Override
-    public void onFailure(Call<List<ApiDto>> call, Throwable throwable) {
-        System.out.println("Some problems...");
-    }
 }

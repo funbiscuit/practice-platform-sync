@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface RequestInterface {
 
-    @POST("save")
-    Call<List<ApiDto>> saveModules(@Body ApiDto apiDto);
+    @POST("api/v0/modules")
+    Call<ModuleDto> saveModules(@Body ModuleObj moduleObj);
 }

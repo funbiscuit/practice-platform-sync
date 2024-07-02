@@ -13,5 +13,5 @@ public interface ModuleApi {
     Call<ModuleDto> saveModule(@Body ModuleObj moduleObj);
 
     @GET("api/v0/modules")
-    Call<List<ModuleDto>> checkModules();
+    Call<List<ModuleDto>> getAll();
 }

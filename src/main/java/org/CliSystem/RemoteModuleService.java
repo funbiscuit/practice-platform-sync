@@ -14,16 +14,15 @@ import java.util.stream.Collectors;
 
 public class RemoteModuleService {
 
-    private final String url;
+    private final Retrofit retrofit;
 
     public RemoteModuleService(String url) {
-        this.url = url;
+        retrofit = createRetro(url);
     }
 
     public List<ModuleDto> getModules() {
-        Retrofit retrofit = createRetro(url);
         ModuleApi service = retrofit.create(ModuleApi.class);
-        Call<List<ModuleDto>> repos = service.checkModules();
+        Call<List<ModuleDto>> repos = service.getAll();
         try {
             Response<List<ModuleDto>> response = repos.execute();
             return response.body();
@@ -32,15 +31,7 @@ public class RemoteModuleService {
         }
     }
 
-    public void saveAllNewModules(String path) {
-        LocalModuleService localModuleService = new LocalModuleService();
-        List<ModuleObj> localModules = localModuleService.parseModules(path);
-        List<ModuleObj> moduleObjs = filterNotInLocal(getModules(), localModules);
-        moduleObjs.forEach(this::save);
-    }
-
-    private void save(ModuleObj module) {
-        Retrofit retrofit = createRetro(url);
+    public void save(ModuleObj module) {
         ModuleApi service = retrofit.create(ModuleApi.class);
         Call<ModuleDto> repos = service.saveModule(module);
         try {
@@ -50,7 +41,7 @@ public class RemoteModuleService {
         }
     }
 
-    private List<ModuleObj> filterNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs) {
+    public List<ModuleObj> filterNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs) {
 
         if (moduleDtos.isEmpty()) {
             return moduleObjs;

@@ -9,6 +9,6 @@ public class ModuleDtoDeserializer implements JsonDeserializer<ModuleDto> {
     public ModuleDto deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
         JsonObject jsonObject = jsonElement.getAsJsonObject();
         String name = jsonObject.get("name").getAsString();
-        return new ModuleDto(name,null);
+        return new ModuleDto(name, null);
     }
 }

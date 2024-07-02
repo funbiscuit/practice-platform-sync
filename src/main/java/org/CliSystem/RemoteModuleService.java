@@ -20,7 +20,7 @@ public class RemoteModuleService {
         this.url = url;
     }
 
-    public List<ModuleDto> getModules(){
+    public List<ModuleDto> getModules() {
         Retrofit retrofit = createRetro(url);
         ModuleApi service = retrofit.create(ModuleApi.class);
         Call<List<ModuleDto>> repos = service.checkModules();
@@ -32,14 +32,14 @@ public class RemoteModuleService {
         }
     }
 
-    public void saveAllNewModules(String path){
+    public void saveAllNewModules(String path) {
         LocalModuleService localModuleService = new LocalModuleService();
         List<ModuleObj> localModules = localModuleService.parseModules(path);
-        List<ModuleObj> moduleObjs = filterNotInLocal(getModules(),localModules);
+        List<ModuleObj> moduleObjs = filterNotInLocal(getModules(), localModules);
         moduleObjs.forEach(this::save);
     }
 
-    private void save(ModuleObj module){
+    private void save(ModuleObj module) {
         Retrofit retrofit = createRetro(url);
         ModuleApi service = retrofit.create(ModuleApi.class);
         Call<ModuleDto> repos = service.saveModule(module);
@@ -50,9 +50,9 @@ public class RemoteModuleService {
         }
     }
 
-    private List<ModuleObj> filterNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs){
+    private List<ModuleObj> filterNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs) {
 
-        if(moduleDtos.isEmpty()){
+        if (moduleDtos.isEmpty()) {
             return moduleObjs;
         }
 
@@ -65,7 +65,7 @@ public class RemoteModuleService {
                 .collect(Collectors.toList());
     }
 
-    private Retrofit createRetro(String url){
+    private Retrofit createRetro(String url) {
         Gson gson = new GsonBuilder()
                 .registerTypeAdapter(ModuleDto.class, new ModuleDtoDeserializer())
                 .create();

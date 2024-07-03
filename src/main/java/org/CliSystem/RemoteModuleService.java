@@ -1,16 +1,13 @@
 package org.CliSystem;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.converter.jackson.JacksonConverterFactory;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class RemoteModuleService {
 
@@ -34,6 +31,7 @@ public class RemoteModuleService {
     public void save(ModuleObj module) {
         ModuleApi service = retrofit.create(ModuleApi.class);
         Call<ModuleDto> repos = service.saveModule(module);
+        System.out.println(module);
         try {
             Response<ModuleDto> response = repos.execute();
         } catch (IOException e) {
@@ -42,12 +40,9 @@ public class RemoteModuleService {
     }
 
     private Retrofit createRetro(String url) {
-        Gson gson = new GsonBuilder()
-                .registerTypeAdapter(ModuleDto.class, new ModuleDtoDeserializer())
-                .create();
         return new Retrofit.Builder()
                 .baseUrl(url)
-                .addConverterFactory(GsonConverterFactory.create(gson))
+                .addConverterFactory(JacksonConverterFactory.create(new ObjectMapper()))
                 .build();
     }
 }

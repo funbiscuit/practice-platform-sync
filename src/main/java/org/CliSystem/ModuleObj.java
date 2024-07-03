@@ -1,9 +1,11 @@
 package org.CliSystem;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Map;
 
 public record ModuleObj(
-        String name,
-        String script,
-        Map<String, String> metadata) {
+        @JsonProperty(value = "name") String name,
+        @JsonProperty(value = "script") String script,
+        @JsonProperty(value = "metadata") Map<String, String> metadata) {
 }

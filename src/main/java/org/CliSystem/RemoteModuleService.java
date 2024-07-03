@@ -41,21 +41,6 @@ public class RemoteModuleService {
         }
     }
 
-    public List<ModuleObj> filterNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs) {
-
-        if (moduleDtos.isEmpty()) {
-            return moduleObjs;
-        }
-
-        Set<String> dtoNames = moduleDtos.stream()
-                .map(ModuleDto::name)
-                .collect(Collectors.toSet());
-
-        return moduleObjs.stream()
-                .filter(moduleObj -> !dtoNames.contains(moduleObj.name()))
-                .collect(Collectors.toList());
-    }
-
     private Retrofit createRetro(String url) {
         Gson gson = new GsonBuilder()
                 .registerTypeAdapter(ModuleDto.class, new ModuleDtoDeserializer())

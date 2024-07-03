@@ -6,7 +6,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class LocalModuleService {
 
@@ -20,31 +22,28 @@ public class LocalModuleService {
         System.out.println(fileList);
         List<ModuleObj> moduleObjs = new ArrayList<>();
         for (Path path : fileList) {
-            moduleObjs.add(new ModuleObj(pathToName(path), pathToScript(path), null));
+            moduleObjs.add(new ModuleObj(pathToName(path), pathToScript(path), Map.of()));
         }
         return moduleObjs;
     }
 
     private String pathToName(Path path) {
-        String sPath = path.toString();
+        List<String> elements = StreamSupport.stream(path.spliterator(), false)
+                .map(Path::toString)
+                .toList();
+        String sPath = String.join(".", elements.subList(elements.indexOf("modules") + 1, elements.size()));
         sPath = sPath.substring(0, sPath.length() - ".py".length());
-        if (path.endsWith("__init__")) {
+        if (sPath.endsWith("__init__")) {
             sPath = sPath.substring(0, sPath.length() - "__init__".length() - 1);
         }
-        int index = sPath.indexOf("modules");
-        if (index != -1) {
-            index += ("modules".length() + 1);
-            return sPath.substring(index).replace("\\", ".");
-        } else {
-            throw new RuntimeException();
-        }
+        return sPath;
     }
 
     private String pathToScript(Path path) {
         try {
             return new String(Files.readAllBytes(Paths.get(path.toString())));
         } catch (IOException e) {
-            return String.valueOf(new RuntimeException());
+            throw new RuntimeException(e);
         }
     }
 

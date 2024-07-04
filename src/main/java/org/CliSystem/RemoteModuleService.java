@@ -7,7 +7,9 @@ import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RemoteModuleService {
 
@@ -18,13 +20,18 @@ public class RemoteModuleService {
         service = retrofit.create(ModuleApi.class);
     }
 
-    public List<ModuleDto> getModules() {
+    public HashMap<String, ModuleDto> getModules() {
         Call<List<ModuleDto>> repos = service.getAll();
+        HashMap<String, ModuleDto> remoteModules = new HashMap<>();
         try {
             Response<List<ModuleDto>> response = repos.execute();
-            return response.body();
+            if (response.body() != null) {
+                response.body().forEach(moduleDto -> remoteModules.put(moduleDto.name(),moduleDto));
+                return remoteModules;
+            }
+            return null;
         } catch (IOException e) {
-            throw new RuntimeException();
+            throw new RuntimeException("Failed to get remote modules", e);
         }
     }
 
@@ -32,8 +39,9 @@ public class RemoteModuleService {
         Call<ModuleDto> repos = service.saveModule(module);
         try {
             Response<ModuleDto> response = repos.execute();
+            System.out.println("Save module: " + response.body().name());
         } catch (IOException e) {
-            throw new RuntimeException();
+            throw new RuntimeException("Failed to save module " + module.name(), e);
         }
     }
 
@@ -41,8 +49,9 @@ public class RemoteModuleService {
         Call<Void> repos = service.deleteModule(name);
         try {
             Response<Void> response = repos.execute();
+            System.out.println("Delete module: " + name);
         } catch (IOException e) {
-            throw new RuntimeException();
+            throw new RuntimeException("Delete to save module " + name, e);
         }
     }
 
@@ -50,8 +59,9 @@ public class RemoteModuleService {
         Call<ModuleDto> repos = service.updateModule(name, moduleObj);
         try {
             Response<ModuleDto> response = repos.execute();
+            System.out.println("Update module: " + name);
         } catch (IOException e) {
-            throw new RuntimeException();
+            throw new RuntimeException("Failed to update module " + name, e);
         }
     }
 

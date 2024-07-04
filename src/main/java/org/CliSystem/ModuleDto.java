@@ -6,4 +6,7 @@ public record ModuleDto(
         String name,
         Map<String, String> metadata
 ) {
+    public String getCheckSum() {
+        return metadata.get("CheckSum");
+    }
 }

@@ -1,9 +1,10 @@
 package org.CliSystem;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.SetUtils;
 import picocli.CommandLine;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
@@ -21,50 +22,47 @@ public class CommandApi implements Callable<String> {
     public String call() {
         RemoteModuleService remoteModuleService = new RemoteModuleService(url);
         LocalModuleService localModuleService = new LocalModuleService();
-        List<ModuleObj> localModules = localModuleService.parseModules(path);
-        List<ModuleDto> remoteModules = remoteModuleService.getModules();
+        HashMap<String, ModuleObj> localModules = localModuleService.parseModules(path);
+        HashMap<String, ModuleDto> remoteModules = remoteModuleService.getModules();
         deleteNotInLocal(remoteModules, localModules, remoteModuleService);
-        updateNotInLocal(remoteModules, localModules, remoteModuleService);
+        updateChanged(remoteModules, localModules, remoteModuleService);
         List<ModuleObj> moduleObjs = filterNotInLocal(remoteModules, localModules);
         moduleObjs.forEach(remoteModuleService::save);
         return "Всё успешно!";
     }
 
-    public List<ModuleObj> filterNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs) {
+    public List<ModuleObj> filterNotInLocal(HashMap<String, ModuleDto> remoteModules, HashMap<String, ModuleObj> localModules) {
 
-        if (moduleDtos.isEmpty()) {
-            return moduleObjs;
+        if (remoteModules.isEmpty()) {
+            return localModules.values().stream().toList();
         }
-        Set<String> dtoNames = moduleDtos.stream()
-                .map(ModuleDto::name)
-                .collect(Collectors.toSet());
+        Set<String> dtoNames = remoteModules.keySet();
+        List<ModuleObj> objNames = localModules.values().stream().toList();
 
-        return moduleObjs.stream()
-                .filter(moduleObj -> !dtoNames.contains(moduleObj.name()))
+        return objNames.stream()
+                .filter(localModule -> !dtoNames.contains(localModule.name()))
                 .collect(Collectors.toList());
     }
 
-    public void deleteNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs, RemoteModuleService remoteModuleService) {
-        if (moduleDtos.isEmpty()) {
+    public void deleteNotInLocal(HashMap<String, ModuleDto> remoteModules, HashMap<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
+        if (remoteModules.isEmpty()) {
             return;
         }
-        Set<String> objNames = moduleObjs.stream()
-                .map(ModuleObj::name)
-                .collect(Collectors.toSet());
-        List<ModuleDto> deleteModules = moduleDtos.stream()
-                .filter(moduleDto -> !objNames.contains(moduleDto.name()))
-                .toList();
-
-        deleteModules.forEach(moduleDto -> remoteModuleService.delete(moduleDto.name()));
+        Set<String> deleteModules = SetUtils.difference(remoteModules.keySet(), localModules.keySet());
+        deleteModules.forEach(remoteModuleService::delete);
     }
 
-    public void updateNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs, RemoteModuleService remoteModuleService) {
-        if (moduleDtos.isEmpty()) {
+    public void updateChanged(HashMap<String, ModuleDto> remoteModules, HashMap<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
+        if (remoteModules.isEmpty()) {
             return;
         }
-        List<ModuleObj> matchingModules = moduleObjs.stream()
-                .filter(obj -> moduleDtos.stream().noneMatch(dto -> dto.metadata().get("CheckSum").equals(obj.metadata().get("CheckSum"))))
+        Set<String> commonModules = SetUtils.intersection(remoteModules.keySet(),localModules.keySet());
+        List<String> matchingModules = commonModules.stream()
+                .filter(module -> !remoteModules.get(module).getCheckSum()
+                                    .equals(localModules.get(module).getCheckSum()))
                 .toList();
-        matchingModules.forEach(moduleObj -> remoteModuleService.update(moduleObj.name(), moduleObj));
+        List<ModuleObj> updateModules = matchingModules.stream().map(localModules::get).toList();
+        updateModules.forEach(moduleObj -> remoteModuleService.update(moduleObj.name(), moduleObj));
     }
+
 }

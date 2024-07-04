@@ -11,14 +11,14 @@ import java.util.List;
 
 public class RemoteModuleService {
 
-    private final Retrofit retrofit;
+    private final ModuleApi service;
 
     public RemoteModuleService(String url) {
-        retrofit = createRetro(url);
+        Retrofit retrofit = createRetro(url);
+        service = retrofit.create(ModuleApi.class);
     }
 
     public List<ModuleDto> getModules() {
-        ModuleApi service = retrofit.create(ModuleApi.class);
         Call<List<ModuleDto>> repos = service.getAll();
         try {
             Response<List<ModuleDto>> response = repos.execute();
@@ -29,7 +29,6 @@ public class RemoteModuleService {
     }
 
     public void save(ModuleObj module) {
-        ModuleApi service = retrofit.create(ModuleApi.class);
         Call<ModuleDto> repos = service.saveModule(module);
         System.out.println(module);
         try {

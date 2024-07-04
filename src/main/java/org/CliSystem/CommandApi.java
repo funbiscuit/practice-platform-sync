@@ -23,6 +23,8 @@ public class CommandApi implements Callable<String> {
         LocalModuleService localModuleService = new LocalModuleService();
         List<ModuleObj> localModules = localModuleService.parseModules(path);
         List<ModuleDto> remoteModules = remoteModuleService.getModules();
+        deleteNotInLocal(remoteModules, localModules, remoteModuleService);
+        updateNotInLocal(remoteModules, localModules, remoteModuleService);
         List<ModuleObj> moduleObjs = filterNotInLocal(remoteModules, localModules);
         moduleObjs.forEach(remoteModuleService::save);
         return "Всё успешно!";
@@ -33,7 +35,6 @@ public class CommandApi implements Callable<String> {
         if (moduleDtos.isEmpty()) {
             return moduleObjs;
         }
-
         Set<String> dtoNames = moduleDtos.stream()
                 .map(ModuleDto::name)
                 .collect(Collectors.toSet());
@@ -41,5 +42,29 @@ public class CommandApi implements Callable<String> {
         return moduleObjs.stream()
                 .filter(moduleObj -> !dtoNames.contains(moduleObj.name()))
                 .collect(Collectors.toList());
+    }
+
+    public void deleteNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs, RemoteModuleService remoteModuleService) {
+        if (moduleDtos.isEmpty()) {
+            return;
+        }
+        Set<String> objNames = moduleObjs.stream()
+                .map(ModuleObj::name)
+                .collect(Collectors.toSet());
+        List<ModuleDto> deleteModules = moduleDtos.stream()
+                .filter(moduleDto -> !objNames.contains(moduleDto.name()))
+                .toList();
+
+        deleteModules.forEach(moduleDto -> remoteModuleService.delete(moduleDto.name()));
+    }
+
+    public void updateNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs, RemoteModuleService remoteModuleService) {
+        if (moduleDtos.isEmpty()) {
+            return;
+        }
+        List<ModuleObj> matchingModules = moduleObjs.stream()
+                .filter(obj -> moduleDtos.stream().noneMatch(dto -> dto.metadata().get("CheckSum").equals(obj.metadata().get("CheckSum"))))
+                .toList();
+        matchingModules.forEach(moduleObj -> remoteModuleService.update(moduleObj.name(), moduleObj));
     }
 }

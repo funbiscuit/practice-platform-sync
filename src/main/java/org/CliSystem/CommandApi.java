@@ -35,6 +35,7 @@ public class CommandApi implements Callable<String> {
         if (moduleDtos.isEmpty()) {
             return moduleObjs;
         }
+      
         Set<String> dtoNames = moduleDtos.stream()
                 .map(ModuleDto::name)
                 .collect(Collectors.toSet());
@@ -67,4 +68,5 @@ public class CommandApi implements Callable<String> {
                 .toList();
         matchingModules.forEach(moduleObj -> remoteModuleService.update(moduleObj.name(), moduleObj));
     }
+
 }

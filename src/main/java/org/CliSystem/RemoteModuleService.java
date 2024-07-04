@@ -30,7 +30,24 @@ public class RemoteModuleService {
 
     public void save(ModuleObj module) {
         Call<ModuleDto> repos = service.saveModule(module);
-        System.out.println(module);
+        try {
+            Response<ModuleDto> response = repos.execute();
+        } catch (IOException e) {
+            throw new RuntimeException();
+        }
+    }
+
+    public void delete(String name) {
+        Call<Void> repos = service.deleteModule(name);
+        try {
+            Response<Void> response = repos.execute();
+        } catch (IOException e) {
+            throw new RuntimeException();
+        }
+    }
+
+    public void update(String name, ModuleObj moduleObj) {
+        Call<ModuleDto> repos = service.updateModule(name, moduleObj);
         try {
             Response<ModuleDto> response = repos.execute();
         } catch (IOException e) {

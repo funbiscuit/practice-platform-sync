@@ -22,29 +22,15 @@ public class CommandApi implements Callable<String> {
     public String call() {
         RemoteModuleService remoteModuleService = new RemoteModuleService(url);
         LocalModuleService localModuleService = new LocalModuleService();
-        HashMap<String, ModuleObj> localModules = localModuleService.parseModules(path);
-        HashMap<String, ModuleDto> remoteModules = remoteModuleService.getModules();
+        Map<String, ModuleObj> localModules = localModuleService.parseModules(path);
+        Map<String, ModuleDto> remoteModules = remoteModuleService.getModules();
         deleteNotInLocal(remoteModules, localModules, remoteModuleService);
-        updateChanged(remoteModules, localModules, remoteModuleService);
-        List<ModuleObj> moduleObjs = filterNotInLocal(remoteModules, localModules);
+        List<ModuleObj> moduleObjs = saveNew(remoteModules, localModules, remoteModuleService);
         moduleObjs.forEach(remoteModuleService::save);
         return "Всё успешно!";
     }
 
-    public List<ModuleObj> filterNotInLocal(HashMap<String, ModuleDto> remoteModules, HashMap<String, ModuleObj> localModules) {
-
-        if (remoteModules.isEmpty()) {
-            return localModules.values().stream().toList();
-        }
-        Set<String> dtoNames = remoteModules.keySet();
-        List<ModuleObj> objNames = localModules.values().stream().toList();
-
-        return objNames.stream()
-                .filter(localModule -> !dtoNames.contains(localModule.name()))
-                .collect(Collectors.toList());
-    }
-
-    public void deleteNotInLocal(HashMap<String, ModuleDto> remoteModules, HashMap<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
+    public void deleteNotInLocal(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
         if (remoteModules.isEmpty()) {
             return;
         }
@@ -52,17 +38,23 @@ public class CommandApi implements Callable<String> {
         deleteModules.forEach(remoteModuleService::delete);
     }
 
-    public void updateChanged(HashMap<String, ModuleDto> remoteModules, HashMap<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
+    public List<ModuleObj> saveNew(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
         if (remoteModules.isEmpty()) {
-            return;
+            return null;
         }
         Set<String> commonModules = SetUtils.intersection(remoteModules.keySet(),localModules.keySet());
-        List<String> matchingModules = commonModules.stream()
-                .filter(module -> !remoteModules.get(module).getCheckSum()
-                                    .equals(localModules.get(module).getCheckSum()))
-                .toList();
-        List<ModuleObj> updateModules = matchingModules.stream().map(localModules::get).toList();
-        updateModules.forEach(moduleObj -> remoteModuleService.update(moduleObj.name(), moduleObj));
+        commonModules.stream()
+                .map(localModules::get)
+                .filter(module -> !remoteModules.get(module.name()).getCheckSum()
+                                    .equals(localModules.get(module.name()).getCheckSum()))
+                .forEach(moduleObj -> remoteModuleService.update(moduleObj.name(), moduleObj));
+
+        Set<String> dtoNames = remoteModules.keySet();
+        List<ModuleObj> objNames = localModules.values().stream().toList();
+
+        return objNames.stream()
+                .filter(localModule -> !dtoNames.contains(localModule.name()))
+                .collect(Collectors.toList());
     }
 
 }

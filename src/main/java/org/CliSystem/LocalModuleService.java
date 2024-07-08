@@ -8,19 +8,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class LocalModuleService {
 
-    public HashMap<String, ModuleObj> parseModules(String modulesDir) {
+    public Map<String, ModuleObj> parseModules(String modulesDir) {
         List<Path> fileList;
         try (Stream<Path> walk = Files.walk(Path.of(modulesDir))) {
             fileList = walk.filter(Files::isRegularFile).filter(path -> path.toString().endsWith(".py")).toList();
         } catch (IOException e) {
             throw new RuntimeException("Failed to parse local modules in " + modulesDir, e);
         }
-        HashMap<String, ModuleObj> remoteModules = new HashMap<>();
+        Map<String, ModuleObj> remoteModules = new HashMap<>();
         String script;
         ModuleObj moduleObj;
         for (Path path : fileList) {
@@ -31,8 +32,8 @@ public class LocalModuleService {
         return remoteModules;
     }
 
-    private HashMap<String, String> createMetadata(String script) {
-        HashMap<String, String> metadata = new HashMap<>();
+    private Map<String, String> createMetadata(String script) {
+        Map<String, String> metadata = new HashMap<>();
         metadata.put("CheckSum", DigestUtils.sha3_256Hex(script));
         return metadata;
     }

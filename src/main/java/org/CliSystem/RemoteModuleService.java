@@ -20,9 +20,9 @@ public class RemoteModuleService {
         service = retrofit.create(ModuleApi.class);
     }
 
-    public HashMap<String, ModuleDto> getModules() {
+    public Map<String, ModuleDto> getModules() {
         Call<List<ModuleDto>> repos = service.getAll();
-        HashMap<String, ModuleDto> remoteModules = new HashMap<>();
+        Map<String, ModuleDto> remoteModules = new HashMap<>();
         try {
             Response<List<ModuleDto>> response = repos.execute();
             if (response.body() != null) {

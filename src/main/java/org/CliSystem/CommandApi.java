@@ -25,8 +25,8 @@ public class CommandApi implements Callable<String> {
         Map<String, ModuleObj> localModules = localModuleService.parseModules(path);
         Map<String, ModuleDto> remoteModules = remoteModuleService.getModules();
         deleteNotInLocal(remoteModules, localModules, remoteModuleService);
-        List<ModuleObj> moduleObjs = saveNew(remoteModules, localModules, remoteModuleService);
-        moduleObjs.forEach(remoteModuleService::save);
+        updateChanged(remoteModules, localModules, remoteModuleService);
+        saveNew(remoteModules, localModules, remoteModuleService);
         return "Всё успешно!";
     }
 
@@ -38,23 +38,26 @@ public class CommandApi implements Callable<String> {
         deleteModules.forEach(remoteModuleService::delete);
     }
 
-    public List<ModuleObj> saveNew(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
+    public void updateChanged(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
         if (remoteModules.isEmpty()) {
-            return null;
+            return;
         }
         Set<String> commonModules = SetUtils.intersection(remoteModules.keySet(),localModules.keySet());
         commonModules.stream()
                 .map(localModules::get)
                 .filter(module -> !remoteModules.get(module.name()).getCheckSum()
-                                    .equals(localModules.get(module.name()).getCheckSum()))
+                        .equals(localModules.get(module.name()).getCheckSum()))
                 .forEach(moduleObj -> remoteModuleService.update(moduleObj.name(), moduleObj));
+    }
 
-        Set<String> dtoNames = remoteModules.keySet();
-        List<ModuleObj> objNames = localModules.values().stream().toList();
-
-        return objNames.stream()
-                .filter(localModule -> !dtoNames.contains(localModule.name()))
-                .collect(Collectors.toList());
+    public void saveNew(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
+        if (remoteModules.isEmpty()) {
+            return;
+        }
+        Set<String> differenceModule = SetUtils.difference(localModules.keySet(),remoteModules.keySet());
+        differenceModule.stream()
+                .map(localModules::get)
+                .forEach(remoteModuleService::save);
     }
 
 }

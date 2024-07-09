@@ -31,17 +31,11 @@ public class CommandApi implements Callable<String> {
     }
 
     public void deleteNotInLocal(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
-        if (remoteModules.isEmpty()) {
-            return;
-        }
         Set<String> deleteModules = SetUtils.difference(remoteModules.keySet(), localModules.keySet());
         deleteModules.forEach(remoteModuleService::delete);
     }
 
     public void updateChanged(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
-        if (remoteModules.isEmpty()) {
-            return;
-        }
         Set<String> commonModules = SetUtils.intersection(remoteModules.keySet(),localModules.keySet());
         commonModules.stream()
                 .map(localModules::get)
@@ -51,9 +45,6 @@ public class CommandApi implements Callable<String> {
     }
 
     public void saveNew(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
-        if (remoteModules.isEmpty()) {
-            return;
-        }
         Set<String> differenceModule = SetUtils.difference(localModules.keySet(),remoteModules.keySet());
         differenceModule.stream()
                 .map(localModules::get)

@@ -1,9 +1,10 @@
 package org.CliSystem;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.SetUtils;
 import picocli.CommandLine;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
@@ -21,25 +22,33 @@ public class CommandApi implements Callable<String> {
     public String call() {
         RemoteModuleService remoteModuleService = new RemoteModuleService(url);
         LocalModuleService localModuleService = new LocalModuleService();
-        List<ModuleObj> localModules = localModuleService.parseModules(path);
-        List<ModuleDto> remoteModules = remoteModuleService.getModules();
-        List<ModuleObj> moduleObjs = filterNotInLocal(remoteModules, localModules);
-        moduleObjs.forEach(remoteModuleService::save);
+        Map<String, ModuleObj> localModules = localModuleService.parseModules(path);
+        Map<String, ModuleDto> remoteModules = remoteModuleService.getModules();
+        deleteNotInLocal(remoteModules, localModules, remoteModuleService);
+        updateChanged(remoteModules, localModules, remoteModuleService);
+        saveNew(remoteModules, localModules, remoteModuleService);
         return "Всё успешно!";
     }
 
-    public List<ModuleObj> filterNotInLocal(List<ModuleDto> moduleDtos, List<ModuleObj> moduleObjs) {
-
-        if (moduleDtos.isEmpty()) {
-            return moduleObjs;
-        }
-
-        Set<String> dtoNames = moduleDtos.stream()
-                .map(ModuleDto::name)
-                .collect(Collectors.toSet());
-
-        return moduleObjs.stream()
-                .filter(moduleObj -> !dtoNames.contains(moduleObj.name()))
-                .collect(Collectors.toList());
+    public void deleteNotInLocal(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
+        Set<String> deleteModules = SetUtils.difference(remoteModules.keySet(), localModules.keySet());
+        deleteModules.forEach(remoteModuleService::delete);
     }
+
+    public void updateChanged(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
+        Set<String> commonModules = SetUtils.intersection(remoteModules.keySet(),localModules.keySet());
+        commonModules.stream()
+                .map(localModules::get)
+                .filter(module -> !remoteModules.get(module.name()).getCheckSum()
+                        .equals(localModules.get(module.name()).getCheckSum()))
+                .forEach(moduleObj -> remoteModuleService.update(moduleObj.name(), moduleObj));
+    }
+
+    public void saveNew(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
+        Set<String> differenceModule = SetUtils.difference(localModules.keySet(),remoteModules.keySet());
+        differenceModule.stream()
+                .map(localModules::get)
+                .forEach(remoteModuleService::save);
+    }
+
 }

@@ -1,6 +1,9 @@
-package org.CliSystem;
+package org.CliSystem.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.CliSystem.ModuleApi;
+import org.CliSystem.ModuleDto;
+import org.CliSystem.ModuleObj;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -26,7 +29,7 @@ public class RemoteModuleService {
         try {
             Response<List<ModuleDto>> response = repos.execute();
             if (response.body() != null) {
-                response.body().forEach(moduleDto -> remoteModules.put(moduleDto.name(),moduleDto));
+                response.body().forEach(moduleDto -> remoteModules.put(moduleDto.name(), moduleDto));
                 return remoteModules;
             }
             return null;

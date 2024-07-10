@@ -1,33 +1,53 @@
 package org.CliSystem;
 
-import org.apache.commons.collections4.CollectionUtils;
+import org.CliSystem.Service.GitService;
+import org.CliSystem.Service.LocalModuleService;
+import org.CliSystem.Service.RemoteModuleService;
 import org.apache.commons.collections4.SetUtils;
 import picocli.CommandLine;
 
-import java.util.*;
+import java.io.File;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 @CommandLine.Command(name = "CommandApi", mixinStandardHelpOptions = true)
 public class CommandApi implements Callable<String> {
 
     @CommandLine.Option(names = {"--target-url", "-t"}, description = "request to url")
-    String url = "http://localhost:8080/";
+    String url;
 
-    @CommandLine.Option(names = {"--source-dir", "-s"}, description = "path to directory")
-    String path = "D:/test-pkg";
+    @CommandLine.Option(names = {"--source-dir", "-d"}, description = "source modules local folder)")
+    String path;
+
+    @CommandLine.Option(names = {"--source-git", "-g"}, description = "source modules git")
+    String gitUrl;
+
+    @CommandLine.Option(names = {"--source-branch", "-b"}, description = "request to url")
+    String branch;
 
 
     @Override
     public String call() {
+        Map<String, ModuleObj> localModules = getLocalModules();
         RemoteModuleService remoteModuleService = new RemoteModuleService(url);
-        LocalModuleService localModuleService = new LocalModuleService();
-        Map<String, ModuleObj> localModules = localModuleService.parseModules(path);
         Map<String, ModuleDto> remoteModules = remoteModuleService.getModules();
         deleteNotInLocal(remoteModules, localModules, remoteModuleService);
         updateChanged(remoteModules, localModules, remoteModuleService);
         saveNew(remoteModules, localModules, remoteModuleService);
         return "Всё успешно!";
+    }
+
+    private Map<String, ModuleObj> getLocalModules() {
+        if(path != null && gitUrl == null){
+            return new LocalModuleService().parseModules(path);
+        }
+        else if(path == null && gitUrl != null){
+            return new GitService().cloneRepo(gitUrl, branch);
+        }
+        else {
+            throw new RuntimeException("Incorrect input of the module source!");
+        }
     }
 
     public void deleteNotInLocal(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
@@ -36,7 +56,7 @@ public class CommandApi implements Callable<String> {
     }
 
     public void updateChanged(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
-        Set<String> commonModules = SetUtils.intersection(remoteModules.keySet(),localModules.keySet());
+        Set<String> commonModules = SetUtils.intersection(remoteModules.keySet(), localModules.keySet());
         commonModules.stream()
                 .map(localModules::get)
                 .filter(module -> !remoteModules.get(module.name()).getCheckSum()
@@ -45,7 +65,7 @@ public class CommandApi implements Callable<String> {
     }
 
     public void saveNew(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
-        Set<String> differenceModule = SetUtils.difference(localModules.keySet(),remoteModules.keySet());
+        Set<String> differenceModule = SetUtils.difference(localModules.keySet(), remoteModules.keySet());
         differenceModule.stream()
                 .map(localModules::get)
                 .forEach(remoteModuleService::save);

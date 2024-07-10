@@ -6,6 +6,7 @@ import org.CliSystem.Service.RemoteModuleService;
 import org.apache.commons.collections4.SetUtils;
 import picocli.CommandLine;
 
+import java.io.File;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -16,11 +17,8 @@ public class CommandApi implements Callable<String> {
     @CommandLine.Option(names = {"--target-url", "-t"}, description = "request to url")
     String url = "http://localhost:8080/";
 
-    @CommandLine.Option(names = {"--source-dir", "-d"}, description = "path to directory")
-    String path = "D:/test-py";
-
-    @CommandLine.Option(names = {"--source-git", "-g"}, description = "request to url")
-    String gitUrl = "https://github.com/funbiscuit/practice-test-pkg.git";
+    @CommandLine.Option(names = {"--source", "-s"}, description = "source modules(git or local folder)")
+    String path = "https://github.com/funbiscuit/practice-test-pkg.git";
 
     @CommandLine.Option(names = {"--source-branch", "-b"}, description = "request to url")
     String branch = "main";
@@ -28,12 +26,16 @@ public class CommandApi implements Callable<String> {
 
     @Override
     public String call() {
-        GitService gitService = new GitService();
+        Map<String, ModuleObj> localModules;
+        if(new File(path).exists()){
+            LocalModuleService localModuleService = new LocalModuleService();
+            localModules = localModuleService.parseModules(path);
+        }
+        else{
+            GitService gitService = new GitService();
+            localModules = gitService.cloneRepo(path, branch);
+        }
         RemoteModuleService remoteModuleService = new RemoteModuleService(url);
-        LocalModuleService localModuleService = new LocalModuleService();
-        Map<String, ModuleObj> gitModules = gitService.cloneRepo(gitUrl, branch, path);
-        Map<String, ModuleObj> localModules = localModuleService.parseModules(path);
-        localModules.putAll(gitModules);
         Map<String, ModuleDto> remoteModules = remoteModuleService.getModules();
         deleteNotInLocal(remoteModules, localModules, remoteModuleService);
         updateChanged(remoteModules, localModules, remoteModuleService);

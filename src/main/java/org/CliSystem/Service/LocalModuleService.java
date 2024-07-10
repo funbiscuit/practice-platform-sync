@@ -1,5 +1,6 @@
-package org.CliSystem;
+package org.CliSystem.Service;
 
+import org.CliSystem.ModuleObj;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.IOException;
@@ -27,7 +28,7 @@ public class LocalModuleService {
         for (Path path : fileList) {
             script = pathToScript(path);
             moduleObj = new ModuleObj(pathToName(path), script, createMetadata(script));
-            remoteModules.put(moduleObj.name(),moduleObj);
+            remoteModules.put(moduleObj.name(), moduleObj);
         }
         return remoteModules;
     }

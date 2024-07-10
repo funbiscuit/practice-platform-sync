@@ -15,16 +15,16 @@ import java.util.concurrent.Callable;
 public class CommandApi implements Callable<String> {
 
     @CommandLine.Option(names = {"--target-url", "-t"}, description = "request to url")
-    String url = "http://localhost:8080/";
+    String url;
 
-    @CommandLine.Option(names = {"--source-dir", "-d"}, description = "source modules(git or local folder)")
+    @CommandLine.Option(names = {"--source-dir", "-d"}, description = "source modules local folder)")
     String path;
 
-    @CommandLine.Option(names = {"--source-git", "-g"}, description = "source modules(git or local folder)")
-    String gitUrl = "https://github.com/funbiscuit/practice-test-pkg.git";
+    @CommandLine.Option(names = {"--source-git", "-g"}, description = "source modules git")
+    String gitUrl;
 
     @CommandLine.Option(names = {"--source-branch", "-b"}, description = "request to url")
-    String branch = "main";
+    String branch;
 
 
     @Override
@@ -40,12 +40,10 @@ public class CommandApi implements Callable<String> {
 
     private Map<String, ModuleObj> getLocalModules() {
         if(path != null && gitUrl == null){
-            LocalModuleService localModuleService = new LocalModuleService();
-            return localModuleService.parseModules(path);
+            return new LocalModuleService().parseModules(path);
         }
         else if(path == null && gitUrl != null){
-            GitService gitService = new GitService();
-            return gitService.cloneRepo(gitUrl, branch);
+            return new GitService().cloneRepo(gitUrl, branch);
         }
         else {
             throw new RuntimeException("Incorrect input of the module source!");

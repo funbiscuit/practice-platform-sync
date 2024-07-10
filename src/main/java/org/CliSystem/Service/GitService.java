@@ -3,6 +3,7 @@ package org.CliSystem.Service;
 import org.CliSystem.ModuleObj;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.file.PathUtils;
+import org.apache.commons.io.file.StandardDeleteOption;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 
@@ -25,7 +26,7 @@ public class GitService {
             git.getRepository().close();
             LocalModuleService localModuleService = new LocalModuleService();
             Map<String, ModuleObj> localModules = localModuleService.parseModules(String.valueOf(tempDir));
-            FileUtils.deleteDirectory(tempDir.toFile());
+            PathUtils.deleteDirectory(tempDir, StandardDeleteOption.OVERRIDE_READ_ONLY);
             return localModules;
         } catch (GitAPIException e) {
             throw new RuntimeException("Failed to get repository: " + gitUrl, e);

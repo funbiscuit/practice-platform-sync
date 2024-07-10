@@ -17,8 +17,11 @@ public class CommandApi implements Callable<String> {
     @CommandLine.Option(names = {"--target-url", "-t"}, description = "request to url")
     String url = "http://localhost:8080/";
 
-    @CommandLine.Option(names = {"--source", "-s"}, description = "source modules(git or local folder)")
-    String path = "https://github.com/funbiscuit/practice-test-pkg.git";
+    @CommandLine.Option(names = {"--source-dir", "-d"}, description = "source modules(git or local folder)")
+    String path;
+
+    @CommandLine.Option(names = {"--source-git", "-g"}, description = "source modules(git or local folder)")
+    String gitUrl = "https://github.com/funbiscuit/practice-test-pkg.git";
 
     @CommandLine.Option(names = {"--source-branch", "-b"}, description = "request to url")
     String branch = "main";
@@ -26,21 +29,27 @@ public class CommandApi implements Callable<String> {
 
     @Override
     public String call() {
-        Map<String, ModuleObj> localModules;
-        if(new File(path).exists()){
-            LocalModuleService localModuleService = new LocalModuleService();
-            localModules = localModuleService.parseModules(path);
-        }
-        else{
-            GitService gitService = new GitService();
-            localModules = gitService.cloneRepo(path, branch);
-        }
+        Map<String, ModuleObj> localModules = getLocalModules();
         RemoteModuleService remoteModuleService = new RemoteModuleService(url);
         Map<String, ModuleDto> remoteModules = remoteModuleService.getModules();
         deleteNotInLocal(remoteModules, localModules, remoteModuleService);
         updateChanged(remoteModules, localModules, remoteModuleService);
         saveNew(remoteModules, localModules, remoteModuleService);
         return "Всё успешно!";
+    }
+
+    private Map<String, ModuleObj> getLocalModules() {
+        if(path != null && gitUrl == null){
+            LocalModuleService localModuleService = new LocalModuleService();
+            return localModuleService.parseModules(path);
+        }
+        else if(path == null && gitUrl != null){
+            GitService gitService = new GitService();
+            return gitService.cloneRepo(gitUrl, branch);
+        }
+        else {
+            throw new RuntimeException("Incorrect input of the module source!");
+        }
     }
 
     public void deleteNotInLocal(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {

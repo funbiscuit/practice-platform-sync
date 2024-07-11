@@ -1,12 +1,18 @@
 package org.CliSystem;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.CliSystem.Service.GitService;
 import org.CliSystem.Service.LocalModuleService;
 import org.CliSystem.Service.RemoteModuleService;
+import org.CliSystem.Yaml.Package;
+import org.CliSystem.Yaml.YamlDto;
 import org.apache.commons.collections4.SetUtils;
 import picocli.CommandLine;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -22,6 +28,9 @@ public class CommandApi implements Callable<String> {
 
     @CommandLine.Option(names = {"--source-git", "-g"}, description = "source modules git")
     String gitUrl;
+
+    @CommandLine.Option(names = {"--deployment"}, description = "source modules yaml")
+    String yaml;
 
     @CommandLine.Option(names = {"--source-branch", "-b"}, description = "request to url")
     String branch;
@@ -39,15 +48,28 @@ public class CommandApi implements Callable<String> {
     }
 
     private Map<String, ModuleObj> getLocalModules() {
-        if(path != null && gitUrl == null){
+        if (yaml != null) {
+            GitService gitService = new GitService();
+            YamlDto yamlDto = parseYaml(yaml);
+            url = yamlDto.target().url();
+            Map<String, ModuleObj> allModules = new HashMap<>();
+            Map<String, ModuleObj> packageModules;
+            for (Package pac : yamlDto.packages()) {
+                packageModules = gitService.parseRepo(pac.name(), pac.ref().branch());
+                Set<String> as = packageModules.keySet();
+                for (String name : as) {
+                    packageModules.get(name).metadata().put("package-name", pac.name());
+                    packageModules.get(name).metadata().put("package-ref-branch", pac.ref().branch());
+                }
+                allModules.putAll(packageModules);
+            }
+            return allModules;
+        } else if (path != null && gitUrl == null) {
             return new LocalModuleService().parseModules(path);
+        } else if (path == null && gitUrl != null) {
+            return new GitService().parseRepo(gitUrl, branch);
         }
-        else if(path == null && gitUrl != null){
-            return new GitService().cloneRepo(gitUrl, branch);
-        }
-        else {
-            throw new RuntimeException("Incorrect input of the module source!");
-        }
+        throw new RuntimeException("Incorrect input of the module source!");
     }
 
     public void deleteNotInLocal(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {
@@ -71,4 +93,13 @@ public class CommandApi implements Callable<String> {
                 .forEach(remoteModuleService::save);
     }
 
+    public YamlDto parseYaml(String path) {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.findAndRegisterModules();
+        try {
+            return mapper.readValue(new File(path), YamlDto.class);
+        } catch (IOException e) {
+            throw new RuntimeException("Can't read yaml file: " + path, e);
+        }
+    }
 }

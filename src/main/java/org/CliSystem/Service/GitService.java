@@ -1,13 +1,15 @@
 package org.CliSystem.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.CliSystem.ModuleObj;
-import org.apache.commons.io.FileUtils;
+import org.CliSystem.Yaml.YamlDto;
 import org.apache.commons.io.file.PathUtils;
 import org.apache.commons.io.file.StandardDeleteOption;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 
-
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +17,7 @@ import java.util.Map;
 
 public class GitService {
 
-    public Map<String, ModuleObj> cloneRepo(String gitUrl, String branch) {
+    public Map<String, ModuleObj> parseRepo(String gitUrl, String branch) {
         try {
             Path tempDir = Files.createTempDirectory("platform_sync_");
             Git git = Git.cloneRepository()

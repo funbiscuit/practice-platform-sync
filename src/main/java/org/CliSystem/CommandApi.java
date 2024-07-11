@@ -38,7 +38,7 @@ public class CommandApi implements Callable<String> {
 
     @Override
     public String call() {
-        Map<String, ModuleObj> localModules = allModules();
+        Map<String, ModuleObj> localModules = getLocalModules();
         RemoteModuleService remoteModuleService = new RemoteModuleService(url);
         Map<String, ModuleDto> remoteModules = remoteModuleService.getModules();
         deleteNotInLocal(remoteModules, localModules, remoteModuleService);
@@ -47,12 +47,12 @@ public class CommandApi implements Callable<String> {
         return "Всё успешно!";
     }
 
-    private Map<String, ModuleObj> allModules() {
+    private Map<String, ModuleObj> getLocalModules() {
         if (yaml != null) {
             GitService gitService = new GitService();
             YamlDto yamlDto = parseYaml(yaml);
             url = yamlDto.target().url();
-            Map<String, ModuleObj> gitModules = new HashMap<>();
+            Map<String, ModuleObj> allModules = new HashMap<>();
             Map<String, ModuleObj> packageModules;
             for (Package pac : yamlDto.packages()) {
                 packageModules = gitService.parseRepo(pac.name(), pac.ref().branch());
@@ -61,9 +61,9 @@ public class CommandApi implements Callable<String> {
                     packageModules.get(name).metadata().put("package-name", pac.name());
                     packageModules.get(name).metadata().put("package-ref-branch", pac.ref().branch());
                 }
-                gitModules.putAll(packageModules);
+                allModules.putAll(packageModules);
             }
-            return gitModules;
+            return allModules;
         } else if (path != null && gitUrl == null) {
             return new LocalModuleService().parseModules(path);
         } else if (path == null && gitUrl != null) {

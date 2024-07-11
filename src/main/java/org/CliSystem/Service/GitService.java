@@ -1,13 +1,15 @@
 package org.CliSystem.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.CliSystem.ModuleObj;
-import org.apache.commons.io.FileUtils;
+import org.CliSystem.Yaml.YamlDto;
 import org.apache.commons.io.file.PathUtils;
 import org.apache.commons.io.file.StandardDeleteOption;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 
-
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,6 +34,16 @@ public class GitService {
             throw new RuntimeException("Failed to get repository: " + gitUrl, e);
         } catch (IOException e) {
             throw new RuntimeException("Failed to create or delete temporary folder", e);
+        }
+    }
+
+    public YamlDto parseYaml(String path) {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.findAndRegisterModules();
+        try {
+            return mapper.readValue(new File(path), YamlDto.class);
+        } catch (IOException e) {
+            throw new RuntimeException("Can't read yaml file: " + path, e);
         }
     }
 }

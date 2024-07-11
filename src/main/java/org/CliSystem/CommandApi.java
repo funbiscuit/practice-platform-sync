@@ -3,10 +3,12 @@ package org.CliSystem;
 import org.CliSystem.Service.GitService;
 import org.CliSystem.Service.LocalModuleService;
 import org.CliSystem.Service.RemoteModuleService;
+import org.CliSystem.Yaml.Packages;
+import org.CliSystem.Yaml.YamlDto;
 import org.apache.commons.collections4.SetUtils;
 import picocli.CommandLine;
 
-import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -22,6 +24,9 @@ public class CommandApi implements Callable<String> {
 
     @CommandLine.Option(names = {"--source-git", "-g"}, description = "source modules git")
     String gitUrl;
+
+    @CommandLine.Option(names = {"--deployment"}, description = "source modules yaml")
+    String yaml;
 
     @CommandLine.Option(names = {"--source-branch", "-b"}, description = "request to url")
     String branch;
@@ -39,15 +44,28 @@ public class CommandApi implements Callable<String> {
     }
 
     private Map<String, ModuleObj> getLocalModules() {
-        if(path != null && gitUrl == null){
+        if (yaml != null) {
+            GitService gitService = new GitService();
+            YamlDto yamlDto = gitService.parseYaml(yaml);
+            url = yamlDto.target().url();
+            Map<String, ModuleObj> gitModules = new HashMap<>();
+            Map<String, ModuleObj> package_;
+            for (Packages packages : yamlDto.packages()) {
+                package_ = gitService.cloneRepo(packages.name(), packages.ref().branch());
+                Set<String> as = package_.keySet();
+                for (String name : as) {
+                    package_.get(name).metadata().put("package-name", packages.name());
+                    package_.get(name).metadata().put("package-ref-branch", packages.ref().branch());
+                }
+                gitModules.putAll(package_);
+            }
+            return gitModules;
+        } else if (path != null && gitUrl == null) {
             return new LocalModuleService().parseModules(path);
-        }
-        else if(path == null && gitUrl != null){
+        } else if (path == null && gitUrl != null) {
             return new GitService().cloneRepo(gitUrl, branch);
         }
-        else {
-            throw new RuntimeException("Incorrect input of the module source!");
-        }
+        throw new RuntimeException("Incorrect input of the module source!");
     }
 
     public void deleteNotInLocal(Map<String, ModuleDto> remoteModules, Map<String, ModuleObj> localModules, RemoteModuleService remoteModuleService) {

@@ -2,5 +2,5 @@ package org.CliSystem.Yaml;
 
 import java.util.List;
 
-public record YamlDto(Target target, List<Packages> packages) {
+public record YamlDto(Target target, List<Package> packages) {
 }

@@ -17,7 +17,7 @@ import java.util.Map;
 
 public class GitService {
 
-    public Map<String, ModuleObj> cloneRepo(String gitUrl, String branch) {
+    public Map<String, ModuleObj> parseRepo(String gitUrl, String branch) {
         try {
             Path tempDir = Files.createTempDirectory("platform_sync_");
             Git git = Git.cloneRepository()
@@ -34,16 +34,6 @@ public class GitService {
             throw new RuntimeException("Failed to get repository: " + gitUrl, e);
         } catch (IOException e) {
             throw new RuntimeException("Failed to create or delete temporary folder", e);
-        }
-    }
-
-    public YamlDto parseYaml(String path) {
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.findAndRegisterModules();
-        try {
-            return mapper.readValue(new File(path), YamlDto.class);
-        } catch (IOException e) {
-            throw new RuntimeException("Can't read yaml file: " + path, e);
         }
     }
 }

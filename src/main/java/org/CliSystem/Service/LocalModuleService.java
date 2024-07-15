@@ -33,13 +33,13 @@ public class LocalModuleService {
         return remoteModules;
     }
 
-    private Map<String, String> createMetadata(String script) {
+    public Map<String, String> createMetadata(String script) {
         Map<String, String> metadata = new HashMap<>();
         metadata.put("CheckSum", DigestUtils.sha3_256Hex(script));
         return metadata;
     }
 
-    private String pathToName(Path path) {
+    public String pathToName(Path path) {
         List<String> elements = StreamSupport.stream(path.spliterator(), false)
                 .map(Path::toString)
                 .toList();

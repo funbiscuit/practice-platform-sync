@@ -6,6 +6,7 @@ import org.CliSystem.Service.GitService;
 import org.CliSystem.Service.LocalModuleService;
 import org.CliSystem.Service.RemoteModuleService;
 import org.CliSystem.Yaml.Package;
+import org.CliSystem.Yaml.Ref;
 import org.CliSystem.Yaml.YamlDto;
 import org.apache.commons.collections4.SetUtils;
 import picocli.CommandLine;
@@ -55,7 +56,7 @@ public class CommandApi implements Callable<String> {
             Map<String, ModuleObj> allModules = new HashMap<>();
             Map<String, ModuleObj> packageModules;
             for (Package pac : yamlDto.packages()) {
-                packageModules = gitService.parseRepo(pac.name(), pac.ref().branch());
+                packageModules = gitService.parseRepo(pac);
                 Set<String> as = packageModules.keySet();
                 for (String name : as) {
                     packageModules.get(name).metadata().put("package-name", pac.name());
@@ -67,7 +68,7 @@ public class CommandApi implements Callable<String> {
         } else if (path != null && gitUrl == null) {
             return new LocalModuleService().parseModules(path);
         } else if (path == null && gitUrl != null) {
-            return new GitService().parseRepo(gitUrl, branch);
+            return new GitService().parseRepo(new Package(gitUrl, new Ref(branch), null));
         }
         throw new RuntimeException("Incorrect input of the module source!");
     }

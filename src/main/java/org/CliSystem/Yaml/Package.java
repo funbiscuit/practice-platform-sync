@@ -1,4 +1,6 @@
 package org.CliSystem.Yaml;
 
-public record Package(String name, Ref ref) {
+import java.util.Map;
+
+public record Package(String name, Ref ref, Map<String, String> config) {
 }

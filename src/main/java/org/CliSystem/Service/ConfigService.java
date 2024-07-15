@@ -3,7 +3,7 @@ package org.CliSystem.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.CliSystem.ModuleObj;
-import org.CliSystem.Yaml.ConfigDto;
+import org.CliSystem.Yaml.PackageDef;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,20 +19,22 @@ public class ConfigService {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         mapper.findAndRegisterModules();
         try {
-            ConfigDto packageConfig = mapper.readValue(new File(pack), ConfigDto.class);
-            String name = packageConfig.config().values().toString();
-            name = name.substring(1, name.length() - 1);
+            PackageDef packageDef = mapper.readValue(new File(pack), PackageDef.class);
+            String name = packageDef.config().module();
             String script;
             if (gitModules.containsKey(name)) {
-                script = String.valueOf(new StringBuilder().append("from modules.").append(name).append("_default").append(" import config as config_default\n\n")
-                        .append("def merge(a, b):\n\t")
-                        .append("if isinstance(a, dict) and isinstance(b, dict):\n\t\t")
-                        .append("a_and_b = a.keys() & b.keys()\n\t\t")
-                        .append("all_keys = a.keys() | b.keys()\n\t\t")
-                        .append("return {k: merge(a[k], b[k]) if k in a_and_b else deepcopy(a[k] if k in a else b[k]) for k in all_keys}\n\t")
-                        .append("return deepcopy(b)\n\n")
-                        .append(configToScript(config))
-                        .append("\n\nconfig = merge(config_default, config)"));
+                script = "from modules." + name +"_default import config as config_default" + """
+                        
+                        def merge(a, b):
+                          if isinstance(a, dict) and isinstance(b, dict):
+                            a_and_b = a.keys() & b.keys()
+                            all_keys = a.keys() | b.keys()
+                            return {k: merge(a[k], b[k]) if k in a_and_b else deepcopy(a[k] if k in a else b[k]) for k in all_keys}
+                          return deepcopy(b)
+                            
+                        """
+                        + configToScript(config)
+                        +"\n\nconfig = merge(config_default, config)";
                 System.out.println(script);
             } else {
                 script = configToScript(config);
@@ -48,7 +50,7 @@ public class ConfigService {
         StringBuilder script = new StringBuilder();
         Set<String> keysConfig = defaultConfig.keySet();
         script.append("config = {");
-        keysConfig.forEach(key -> script.append("\n" + "\t" + "\"" + key + "\"" + ":" + " \"" + defaultConfig.get(key) + "\","));
+        keysConfig.forEach(key -> script.append("\n" + "  " + "\"" + key + "\"" + ":" + " \"" + defaultConfig.get(key) + "\","));
         script.append("\n}");
         return String.valueOf(script);
     }

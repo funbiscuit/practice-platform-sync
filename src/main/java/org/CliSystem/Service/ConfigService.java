@@ -4,12 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.CliSystem.ModuleObj;
 import org.CliSystem.Yaml.ConfigDto;
-import org.apache.commons.collections4.SetUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,41 +22,27 @@ public class ConfigService {
             ConfigDto packageConfig = mapper.readValue(new File(pack), ConfigDto.class);
             String name = packageConfig.config().values().toString();
             name = name.substring(1, name.length() - 1);
+            String script;
             if (gitModules.containsKey(name)) {
-                Map<String, String> gitConfig = getConfig(gitModules.get(name).script());
-                Map<String, String> defaultConfig = combineConfigs(config, gitConfig);
-                String script = configToScript(defaultConfig);
-                return new ModuleObj(name, script, lms.createMetadata(script));
+                script = String.valueOf(new StringBuilder().append("from modules.").append(name).append("_default").append(" import config as config_default\n\n")
+                        .append("def merge(a, b):\n\t")
+                        .append("if isinstance(a, dict) and isinstance(b, dict):\n\t\t")
+                        .append("a_and_b = a.keys() & b.keys()\n\t\t")
+                        .append("all_keys = a.keys() | b.keys()\n\t\t")
+                        .append("return {k: merge(a[k], b[k]) if k in a_and_b else deepcopy(a[k] if k in a else b[k]) for k in all_keys}\n\t")
+                        .append("return deepcopy(b)\n\n")
+                        .append(configToScript(config))
+                        .append("\n\nconfig = merge(config_default, config)"));
+                System.out.println(script);
             } else {
-                String script = configToScript(config);
-                return new ModuleObj(name, script, lms.createMetadata(script));
+                script = configToScript(config);
             }
+            return new ModuleObj(name, script, lms.createMetadata(script));
         } catch (IOException e) {
             throw new RuntimeException("Can't read yaml file: " + tempDir, e);
         }
     }
 
-    public Map<String, String> getConfig(String script) {
-        Map<String, String> configs = new HashMap<>();
-        StringBuilder text = new StringBuilder(script);
-        String key, value;
-        while (text.indexOf("\"") != -1) {
-            text.delete(0, text.indexOf("\"") + 1);
-            key = text.substring(0, text.indexOf("\""));
-            text.delete(0, text.indexOf("\"") + 1);
-            text.delete(0, text.indexOf("\"") + 1);
-            value = text.substring(0, text.indexOf("\""));
-            text.delete(0, text.indexOf("\"") + 1);
-            configs.put(key, value);
-        }
-        return configs;
-    }
-
-    public Map<String, String> combineConfigs(Map<String, String> yamlConfig, Map<String, String> gitConfig) {
-        Set<String> diffGit = SetUtils.difference(gitConfig.keySet(), yamlConfig.keySet());
-        diffGit.forEach(config -> yamlConfig.put(config, gitConfig.get(config)));
-        return yamlConfig;
-    }
 
     public String configToScript(Map<String, String> defaultConfig) {
         StringBuilder script = new StringBuilder();

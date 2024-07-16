@@ -1,7 +1,10 @@
-package org.CliSystem;
+package org.CliSystem.Cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.CliSystem.ModuleDto;
+import org.CliSystem.ModuleObj;
+import org.CliSystem.OptionDto;
 import org.CliSystem.Service.GitService;
 import org.CliSystem.Service.LocalModuleService;
 import org.CliSystem.Service.RemoteModuleService;
@@ -18,8 +21,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
-@CommandLine.Command(name = "CommandApi", mixinStandardHelpOptions = true)
-public class CommandApi implements Callable<String> {
+@CommandLine.Command(name = "deploy", mixinStandardHelpOptions = true)
+public class DeployCli implements Callable<String> {
 
     @CommandLine.Option(names = {"--target-url", "-t"}, description = "request to url")
     String url;
@@ -39,8 +42,10 @@ public class CommandApi implements Callable<String> {
 
     @Override
     public String call() {
-        Map<String, ModuleObj> localModules = getLocalModules();
-        RemoteModuleService remoteModuleService = new RemoteModuleService(url);
+        OptionDto optionDto = new OptionDto((yaml != null) ? parseYaml(yaml).target().url() : url,
+                path, gitUrl, yaml, branch);
+        Map<String, ModuleObj> localModules = getLocalModules(optionDto);
+        RemoteModuleService remoteModuleService = new RemoteModuleService(optionDto.url());
         Map<String, ModuleDto> remoteModules = remoteModuleService.getModules();
         deleteNotInLocal(remoteModules, localModules, remoteModuleService);
         updateChanged(remoteModules, localModules, remoteModuleService);
@@ -48,27 +53,13 @@ public class CommandApi implements Callable<String> {
         return "Всё успешно!";
     }
 
-    private Map<String, ModuleObj> getLocalModules() {
-        if (yaml != null) {
-            GitService gitService = new GitService();
-            YamlDto yamlDto = parseYaml(yaml);
-            url = yamlDto.target().url();
-            Map<String, ModuleObj> allModules = new HashMap<>();
-            Map<String, ModuleObj> packageModules;
-            for (Package pac : yamlDto.packages()) {
-                packageModules = gitService.parseRepo(pac);
-                Set<String> as = packageModules.keySet();
-                for (String name : as) {
-                    packageModules.get(name).metadata().put("package-name", pac.name());
-                    packageModules.get(name).metadata().put("package-ref-branch", pac.ref().branch());
-                }
-                allModules.putAll(packageModules);
-            }
-            return allModules;
-        } else if (path != null && gitUrl == null) {
-            return new LocalModuleService().parseModules(path);
-        } else if (path == null && gitUrl != null) {
-            return new GitService().parseRepo(new Package(gitUrl, new Ref(branch), null));
+    public Map<String, ModuleObj> getLocalModules(OptionDto optionDto) {
+        if (optionDto.yaml() != null) {
+            return getModulesFromYaml(optionDto.yaml());
+        } else if (optionDto.path() != null && optionDto.gitUrl() == null) {
+            return new LocalModuleService().parseModules(optionDto.path());
+        } else if (optionDto.path() == null && optionDto.gitUrl() != null) {
+            return new GitService().parseRepo(new Package(optionDto.gitUrl(), new Ref(optionDto.branch()), null));
         }
         throw new RuntimeException("Incorrect input of the module source!");
     }
@@ -92,6 +83,20 @@ public class CommandApi implements Callable<String> {
         differenceModule.stream()
                 .map(localModules::get)
                 .forEach(remoteModuleService::save);
+    }
+
+    public Map<String, ModuleObj> getModulesFromYaml(String yaml) {
+        Map<String, ModuleObj> allModules = new HashMap<>();
+        for (Package pac : parseYaml(yaml).packages()) {
+            Map<String, ModuleObj> packageModules = new GitService().parseRepo(pac);
+            Set<String> as = packageModules.keySet();
+            for (String name : as) {
+                packageModules.get(name).metadata().put("package-name", pac.name());
+                packageModules.get(name).metadata().put("package-ref-branch", pac.ref().branch());
+            }
+            allModules.putAll(packageModules);
+        }
+        return allModules;
     }
 
     public YamlDto parseYaml(String path) {

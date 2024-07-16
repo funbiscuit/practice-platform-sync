@@ -2,12 +2,8 @@ package org.CliSystem.Cli;
 
 import org.CliSystem.ModuleDto;
 import org.CliSystem.ModuleObj;
-import org.CliSystem.Service.GitService;
-import org.CliSystem.Service.LocalModuleService;
+import org.CliSystem.OptionDto;
 import org.CliSystem.Service.RemoteModuleService;
-import org.CliSystem.Yaml.Package;
-import org.CliSystem.Yaml.Ref;
-import org.CliSystem.Yaml.YamlDto;
 import org.apache.commons.collections4.SetUtils;
 import picocli.CommandLine;
 
@@ -15,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 @CommandLine.Command(name = "diff", mixinStandardHelpOptions = true)
 public class DiffCli implements Callable<String> {
@@ -37,54 +34,29 @@ public class DiffCli implements Callable<String> {
     @Override
     public String call() {
         DeployCli deployCli = new DeployCli();
-        Map<String, ModuleObj> localModules = getLocalModules();
-        RemoteModuleService remoteModuleService = new RemoteModuleService(url);
+        OptionDto optionDto = new OptionDto((yaml != null) ? deployCli.parseYaml(yaml).target().url() : url,
+                path, gitUrl, yaml, branch);
+        Map<String, ModuleObj> localModules = deployCli.getLocalModules(optionDto);
+        RemoteModuleService remoteModuleService = new RemoteModuleService(optionDto.url());
         Map<String, ModuleDto> remoteModules = remoteModuleService.getModules();
-        Set<String> diffLocal = SetUtils.difference(localModules.keySet(), remoteModules.keySet());
-        Set<String> diffRemote = SetUtils.difference(remoteModules.keySet(), localModules.keySet());
+        Map<String, Set<String>> diff = new HashMap<>();
+        diff.put("New modules:", SetUtils.difference(localModules.keySet(), remoteModules.keySet()));
+        diff.put("Orphaned modules:", SetUtils.difference(remoteModules.keySet(), localModules.keySet()));
         Set<String> commonModules = SetUtils.intersection(remoteModules.keySet(), localModules.keySet());
-        if (!diffLocal.isEmpty()) {
-            System.out.println("New modules:");
-            diffLocal.forEach(module -> System.out.println("- " + module));
-        }
         if (!commonModules.isEmpty()) {
-            System.out.println("Changed modules:");
-            commonModules.stream()
-                    .map(localModules::get)
-                    .filter(module -> !remoteModules.get(module.name()).getCheckSum()
-                            .equals(localModules.get(module.name()).getCheckSum()))
-                    .forEach(moduleObj -> System.out.println("- " + moduleObj.name()));
+            diff.put("Changed modules:", commonModules.stream()
+                    .map(key -> localModules.get(key).name())
+                    .filter(module -> !remoteModules.get(module).getCheckSum()
+                            .equals(localModules.get(module).getCheckSum()))
+                    .collect(Collectors.toSet()));
         }
-        if (!diffRemote.isEmpty()) {
-            System.out.println("Orphaned modules:");
-            diffRemote.forEach(module -> System.out.println("- " + module));
+        for (String name : diff.keySet()) {
+            if (!diff.get(name).isEmpty()) {
+                System.out.println(name);
+                diff.get(name).forEach(s -> System.out.println("- " + s));
+            }
         }
         return "";
     }
-
-    public Map<String, ModuleObj> getLocalModules() {
-        if (yaml != null) {
-            GitService gitService = new GitService();
-            DeployCli deployCli = new DeployCli();
-            YamlDto yamlDto = deployCli.parseYaml(yaml);
-            url = yamlDto.target().url();
-            Map<String, ModuleObj> allModules = new HashMap<>();
-            Map<String, ModuleObj> packageModules;
-            for (Package pac : yamlDto.packages()) {
-                packageModules = gitService.parseRepo(pac);
-                Set<String> as = packageModules.keySet();
-                for (String name : as) {
-                    packageModules.get(name).metadata().put("package-name", pac.name());
-                    packageModules.get(name).metadata().put("package-ref-branch", pac.ref().branch());
-                }
-                allModules.putAll(packageModules);
-            }
-            return allModules;
-        } else if (path != null && gitUrl == null) {
-            return new LocalModuleService().parseModules(path);
-        } else if (path == null && gitUrl != null) {
-            return new GitService().parseRepo(new Package(gitUrl, new Ref(branch), null));
-        }
-        throw new RuntimeException("Incorrect input of the module source!");
-    }
 }
+

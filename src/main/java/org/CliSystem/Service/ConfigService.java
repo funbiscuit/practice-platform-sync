@@ -23,8 +23,8 @@ public class ConfigService {
             String name = packageDef.config().module();
             String script;
             if (gitModules.containsKey(name)) {
-                script = "from modules." + name +"_default import config as config_default" + """
-                        
+                script = "from modules." + name + "_default import config as config_default" + """
+                                                
                         def merge(a, b):
                           if isinstance(a, dict) and isinstance(b, dict):
                             a_and_b = a.keys() & b.keys()
@@ -34,8 +34,7 @@ public class ConfigService {
                             
                         """
                         + configToScript(config)
-                        +"\n\nconfig = merge(config_default, config)";
-                System.out.println(script);
+                        + "\n\nconfig = merge(config_default, config)";
             } else {
                 script = configToScript(config);
             }

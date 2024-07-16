@@ -1,7 +1,9 @@
-package org.CliSystem;
+package org.CliSystem.Cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.CliSystem.ModuleDto;
+import org.CliSystem.ModuleObj;
 import org.CliSystem.Service.GitService;
 import org.CliSystem.Service.LocalModuleService;
 import org.CliSystem.Service.RemoteModuleService;
@@ -18,8 +20,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
-@CommandLine.Command(name = "CommandApi", mixinStandardHelpOptions = true)
-public class CommandApi implements Callable<String> {
+@CommandLine.Command(name = "deploy", mixinStandardHelpOptions = true)
+public class DeployCli implements Callable<String> {
 
     @CommandLine.Option(names = {"--target-url", "-t"}, description = "request to url")
     String url;
@@ -48,7 +50,7 @@ public class CommandApi implements Callable<String> {
         return "Всё успешно!";
     }
 
-    private Map<String, ModuleObj> getLocalModules() {
+    public Map<String, ModuleObj> getLocalModules() {
         if (yaml != null) {
             GitService gitService = new GitService();
             YamlDto yamlDto = parseYaml(yaml);
